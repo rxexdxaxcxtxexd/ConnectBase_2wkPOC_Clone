@@ -1,0 +1,163 @@
+@model TelecomApiAnalyzer.Web.Models.ApiAnalysisProject
+@{
+    ViewData["Title"] = "API Analysis";
+}
+
+<div class="container-fluid mt-4">
+    <h2>API Analysis - @Model.Name</h2>
+    
+    <!-- Workflow Progress -->
+    <div class="row mb-4">
+        <div class="col-12">
+            @await Html.PartialAsync("_WorkflowProgress", Model.WorkflowSteps)
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Technical Specification</h4>
+                </div>
+                <div class="card-body">
+                    <form asp-action="UpdateSpecification" method="post">
+                        <input type="hidden" name="projectId" value="@Model.Id" />
+                        <div class="form-group">
+                            <textarea class="form-control" name="technicalSpec" rows="15">@Model.Document.TechnicalSpec?.Content</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save & Continue
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="downloadMarkdown('technical-spec')">
+                            <i class="fas fa-download"></i> Download MD
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Use Case Guide</h4>
+                </div>
+                <div class="card-body">
+                    <form>
+                        <div class="form-group">
+                            <textarea class="form-control" name="useCaseGuide" rows="15">@Model.Document.UseCaseGuide?.Content</textarea>
+                        </div>
+                        <button type="button" class="btn btn-secondary" onclick="downloadMarkdown('use-case-guide')">
+                            <i class="fas fa-download"></i> Download MD
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Extracted Information -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4>Extracted API Information</h4>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-toggle="tab" href="#endpoints">Endpoints</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-toggle="tab" href="#models">Data Models</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-toggle="tab" href="#authentication">Authentication</a>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content mt-3">
+                        <div id="endpoints" class="tab-pane active">
+                            @if (Model.Document.TechnicalSpec?.Endpoints != null)
+                            {
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Method</th>
+                                            <th>Path</th>
+                                            <th>Description</th>
+                                            <th>Parameters</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var endpoint in Model.Document.TechnicalSpec.Endpoints)
+                                        {
+                                            <tr>
+                                                <td><span class="badge badge-info">@endpoint.Method</span></td>
+                                                <td><code>@endpoint.Path</code></td>
+                                                <td>@endpoint.Description</td>
+                                                <td>@endpoint.Parameters?.Count parameters</td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            }
+                        </div>
+                        
+                        <div id="models" class="tab-pane">
+                            @if (Model.Document.TechnicalSpec?.Models != null)
+                            {
+                                @foreach (var model in Model.Document.TechnicalSpec.Models)
+                                {
+                                    <div class="mb-3">
+                                        <h5>@model.Name</h5>
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Property</th>
+                                                    <th>Type</th>
+                                                    <th>Required</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var prop in model.Properties)
+                                                {
+                                                    <tr>
+                                                        <td>@prop.Name</td>
+                                                        <td>@prop.Type</td>
+                                                        <td>@(prop.Required ? "Yes" : "No")</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                            }
+                        </div>
+                        
+                        <div id="authentication" class="tab-pane">
+                            @if (Model.Document.TechnicalSpec?.Authentication != null)
+                            {
+                                <dl class="row">
+                                    <dt class="col-sm-3">Type</dt>
+                                    <dd class="col-sm-9">@Model.Document.TechnicalSpec.Authentication.Type</dd>
+                                    
+                                    <dt class="col-sm-3">Token Endpoint</dt>
+                                    <dd class="col-sm-9">@Model.Document.TechnicalSpec.Authentication.TokenEndpoint</dd>
+                                </dl>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function downloadMarkdown(type) {
+            // Implementation for downloading markdown files
+            console.log('Downloading ' + type);
+        }
+    </script>
+}

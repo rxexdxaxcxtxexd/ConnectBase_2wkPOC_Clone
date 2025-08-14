@@ -1,0 +1,92 @@
+@model List<TelecomApiAnalyzer.Web.Models.WorkflowStep>
+
+<div class="d-flex justify-content-between align-items-center workflow-steps">
+    @foreach (var step in Model.OrderBy(s => s.StepNumber))
+    {
+        var iconClass = step.StepNumber switch
+        {
+            0 => "fa-upload",
+            1 => "fa-file-alt",
+            2 => "fa-code",
+            3 => "fa-lock",
+            4 => "fa-user",
+            5 => "fa-vial",
+            6 => "fa-rocket",
+            _ => "fa-circle"
+        };
+        
+        var statusClass = step.Status switch
+        {
+            "Completed" => "completed",
+            "In Progress" => "active",
+            _ => ""
+        };
+        
+        <div class="step-item text-center">
+            <div class="step-icon @statusClass">
+                <i class="fas @iconClass"></i>
+            </div>
+            <small>@step.Name</small>
+        </div>
+        
+        @if (step.StepNumber < Model.Count - 1)
+        {
+            <div class="step-divider"></div>
+        }
+    }
+</div>
+
+<style>
+    .workflow-steps {
+        padding: 20px 0;
+    }
+    
+    .step-item {
+        flex: 0 0 auto;
+    }
+    
+    .step-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: #e9ecef;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 10px;
+        font-size: 24px;
+        color: #6c757d;
+    }
+    
+    .step-icon.active {
+        background: #007bff;
+        color: white;
+        animation: pulse 2s infinite;
+    }
+    
+    .step-icon.completed {
+        background: #28a745;
+        color: white;
+    }
+    
+    .step-divider {
+        flex: 1;
+        height: 2px;
+        background: #dee2e6;
+        margin: 0 10px;
+        align-self: center;
+        margin-bottom: 30px;
+    }
+    
+    @@keyframes pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(0, 123, 255, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(0, 123, 255, 0);
+        }
+    }
+</style>
