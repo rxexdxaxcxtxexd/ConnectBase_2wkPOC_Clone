@@ -1,0 +1,182 @@
+@model TelecomApiAnalyzer.Web.Models.ApiAnalysisProject
+@{
+    ViewData["Title"] = "Generated Code";
+}
+
+<div class="container-fluid mt-4">
+    <h2>Generated Code - @Model.Name</h2>
+    
+    <!-- Workflow Progress -->
+    <div class="row mb-4">
+        <div class="col-12">
+            @await Html.PartialAsync("_WorkflowProgress", Model.WorkflowSteps)
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4><i class="fas fa-code"></i> Generated API Client Code</h4>
+                    <div>
+                        <small class="text-muted">Generated: @Model.Code?.GeneratedAt.ToString("yyyy-MM-dd HH:mm")</small>
+                        <span class="badge badge-success ms-2">@Model.Code?.Language</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    @if (Model.Code?.Files != null && Model.Code.Files.Any())
+                    {
+                        <!-- Code File Tabs -->
+                        <ul class="nav nav-tabs" id="codeFileTabs" role="tablist">
+                            @{
+                                var isFirst = true;
+                                var fileIndex = 0;
+                            }
+                            @foreach (var file in Model.Code.Files)
+                            {
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link @(isFirst ? "active" : "")" id="file-@(fileIndex)-tab" data-bs-toggle="tab" data-bs-target="#file-@(fileIndex)" type="button" role="tab">
+                                        <i class="fas fa-file-code"></i> @file.Key
+                                    </button>
+                                </li>
+                                isFirst = false;
+                                fileIndex++;
+                            }
+                        </ul>
+
+                        <!-- Code File Contents -->
+                        <div class="tab-content mt-3" id="codeFileTabContent">
+                            @{
+                                isFirst = true;
+                                fileIndex = 0;
+                            }
+                            @foreach (var file in Model.Code.Files)
+                            {
+                                <div class="tab-pane fade @(isFirst ? "show active" : "")" id="file-@(fileIndex)" role="tabpanel">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h6 class="mb-0">@file.Key</h6>
+                                        <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('code-@(fileIndex)')">
+                                            <i class="fas fa-copy"></i> Copy
+                                        </button>
+                                    </div>
+                                    <pre><code id="code-@(fileIndex)" class="language-csharp">@file.Value</code></pre>
+                                </div>
+                                isFirst = false;
+                                fileIndex++;
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            No code files were generated. Please check the API specification and try again.
+                        </div>
+                    }
+                </div>
+                <div class="card-footer">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button class="btn btn-success" onclick="downloadAllFiles()">
+                                <i class="fas fa-download"></i> Download All Files
+                            </button>
+                            <button class="btn btn-info" onclick="downloadAsZip()">
+                                <i class="fas fa-file-archive"></i> Download as ZIP
+                            </button>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <a href="@Url.Action("TestConfiguration", new { projectId = Model.Id })" class="btn btn-primary">
+                                <i class="fas fa-arrow-right"></i> Continue to Authentication
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Code Statistics -->
+    <div class="row mt-4">
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h3 class="text-primary">@(Model.Code?.Files?.Count ?? 0)</h3>
+                    <p class="mb-0">Generated Files</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h3 class="text-success">@(Model.Document?.TechnicalSpec?.Endpoints?.Count ?? 0)</h3>
+                    <p class="mb-0">API Endpoints</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    <h3 class="text-info">@(Model.Document?.TechnicalSpec?.Models?.Count ?? 0)</h3>
+                    <p class="mb-0">Data Models</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+pre {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    overflow-x: auto;
+    max-height: 500px;
+    font-size: 0.875rem;
+}
+
+code {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    white-space: pre-wrap;
+}
+
+.nav-tabs .nav-link {
+    border-bottom-color: transparent;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: #f8f9fa;
+    border-color: #dee2e6 #dee2e6 #f8f9fa;
+}
+</style>
+
+<script>
+function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    const text = element.textContent || element.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+        // Show success feedback
+        const button = event.target.closest('button');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-check"></i> Copied!';
+        button.classList.remove('btn-outline-secondary');
+        button.classList.add('btn-success');
+        
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.classList.remove('btn-success');
+            button.classList.add('btn-outline-secondary');
+        }, 2000);
+    });
+}
+
+function downloadAllFiles() {
+    // This would need to be implemented as a controller action
+    alert('Download functionality would be implemented here');
+}
+
+function downloadAsZip() {
+    // This would need to be implemented as a controller action
+    alert('ZIP download functionality would be implemented here');
+}
+</script>

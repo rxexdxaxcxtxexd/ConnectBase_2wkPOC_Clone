@@ -166,7 +166,7 @@ namespace TelecomApiAnalyzer.Web.Services
             return new
             {
                 name = "Test Suite",
-                item = new[]
+                item = new object[]
                 {
                     new
                     {
