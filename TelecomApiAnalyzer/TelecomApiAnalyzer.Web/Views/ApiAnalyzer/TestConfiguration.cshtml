@@ -1,0 +1,500 @@
+@model TelecomApiAnalyzer.Web.Models.ApiAnalysisProject
+@{
+    ViewData["Title"] = "Test Configuration";
+}
+
+<div class="container-fluid mt-4">
+    <h2>Test Configuration - @Model.Name</h2>
+    
+    <!-- Workflow Progress -->
+    <div class="row mb-4">
+        <div class="col-12">
+            @await Html.PartialAsync("_WorkflowProgress", Model.WorkflowSteps)
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Authentication Configuration -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-shield-alt"></i> Authentication Configuration</h4>
+                </div>
+                <div class="card-body">
+                    @using (Html.BeginForm("SaveAuthentication", "ApiAnalyzer", new { projectId = Model.Id }, FormMethod.Post, true, new { @class = "needs-validation", novalidate = "novalidate" }))
+                    {
+                        <div class="mb-3">
+                            <label for="authType" class="form-label">Authentication Type</label>
+                            <select class="form-select" id="authType" name="authType" required>
+                                <option value="">Select Authentication Type</option>
+                                <option value="OAuth2" selected="@(Model.Document?.TechnicalSpec?.Authentication?.Type == "OAuth2")">OAuth 2.0</option>
+                                <option value="ApiKey" selected="@(Model.Document?.TechnicalSpec?.Authentication?.Type == "ApiKey")">API Key</option>
+                                <option value="Bearer" selected="@(Model.Document?.TechnicalSpec?.Authentication?.Type == "Bearer")">Bearer Token</option>
+                                <option value="Basic" selected="@(Model.Document?.TechnicalSpec?.Authentication?.Type == "Basic")">Basic Auth</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="clientId" class="form-label">Client ID</label>
+                            <input type="text" class="form-control" id="clientId" name="clientId" 
+                                   value="@Model.Document?.TechnicalSpec?.Authentication?.ClientId" placeholder="Enter Client ID">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="clientSecret" class="form-label">Client Secret</label>
+                            <input type="password" class="form-control" id="clientSecret" name="clientSecret" 
+                                   value="@Model.Document?.TechnicalSpec?.Authentication?.ClientSecret" placeholder="Enter Client Secret">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="tokenEndpoint" class="form-label">Token Endpoint</label>
+                            <input type="url" class="form-control" id="tokenEndpoint" name="tokenEndpoint" 
+                                   value="@Model.Document?.TechnicalSpec?.Authentication?.TokenEndpoint" placeholder="https://api.example.com/oauth/token">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Authentication
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Configuration -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-vials"></i> Test Configuration</h4>
+                </div>
+                <div class="card-body">
+                    @if (Model.PostmanCollection != null)
+                    {
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i>
+                            Postman collection generated successfully!
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Collection Name</label>
+                            <input type="text" class="form-control" value="@Model.PostmanCollection.Name" readonly>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Generated At</label>
+                            <input type="text" class="form-control" value="@Model.PostmanCollection.GeneratedAt.ToString("yyyy-MM-dd HH:mm")" readonly>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Test Requests</label>
+                            <div class="bg-light p-3 rounded">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span>@(Model.Document?.TechnicalSpec?.Endpoints?.Count ?? 0) endpoints configured</span>
+                                    <span class="badge bg-success">Ready for Testing</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <a href="@Url.Action("DownloadPostmanCollection", new { projectId = Model.Id })" class="btn btn-outline-primary">
+                                <i class="fas fa-download"></i> Download Postman Collection
+                            </a>
+                            <button type="button" class="btn btn-success" onclick="runTests()">
+                                <i class="fas fa-play"></i> Run Test Suite
+                            </button>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Test configuration not yet generated. Please save authentication details first.
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Endpoints Summary -->
+    @if (Model.Document?.TechnicalSpec?.Endpoints != null)
+    {
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h4><i class="fas fa-list"></i> API Endpoints Summary</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Method</th>
+                                        <th>Endpoint</th>
+                                        <th>Description</th>
+                                        <th>Test Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var endpoint in Model.Document.TechnicalSpec.Endpoints)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <span class="badge bg-primary">@endpoint.Method</span>
+                                            </td>
+                                            <td><code>@endpoint.Path</code></td>
+                                            <td>@endpoint.Description</td>
+                                            <td>
+                                                <span class="badge bg-secondary">Pending</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Action Buttons -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between">
+                <a href="@Url.Action("GenerateCode", new { projectId = Model.Id })" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Generated Code
+                </a>
+                <a href="@Url.Action("GenerateDeployment", new { projectId = Model.Id })" class="btn btn-success">
+                    <i class="fas fa-arrow-right"></i> Continue to Deployment
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+code {
+    color: #d63384;
+    background-color: #f8f9fa;
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+}
+</style>
+
+<script>
+async function runTests() {
+    const button = event.target;
+    const originalText = button.innerHTML;
+    
+    try {
+        // Show loading state
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running Tests...';
+        button.disabled = true;
+        button.classList.remove('btn-success');
+        button.classList.add('btn-primary');
+
+        // Clear any existing results
+        const existingResults = document.getElementById('test-results');
+        if (existingResults) {
+            existingResults.remove();
+        }
+
+        // Get authentication details from form
+        const authType = document.getElementById('authType').value;
+        const clientId = document.getElementById('clientId').value;
+        const clientSecret = document.getElementById('clientSecret').value;
+        const tokenEndpoint = document.getElementById('tokenEndpoint').value;
+        const baseUrl = prompt('Enter API Base URL:', 'https://pre-apimanager.lyntia.com');
+        
+        if (!baseUrl) {
+            throw new Error('Base URL is required');
+        }
+
+        // Prepare test configuration
+        const testConfig = {
+            baseUrl: baseUrl,
+            authentication: {
+                type: authType,
+                clientId: clientId,
+                clientSecret: clientSecret,
+                tokenEndpoint: tokenEndpoint
+            },
+            globalHeaders: {
+                'Accept': 'application/json'
+            },
+            timeoutMs: 30000,
+            validateSchema: true,
+            validateResponseTime: true,
+            maxResponseTimeMs: 5000
+        };
+
+        const requestData = {
+            projectId: '@Model.Id',
+            configuration: testConfig
+        };
+
+        // Make API call to run tests
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+
+        // Add CSRF token if available
+        const csrfToken = document.querySelector('input[name="__RequestVerificationToken"]');
+        if (csrfToken) {
+            headers['RequestVerificationToken'] = csrfToken.value;
+        }
+
+        const url = `/ApiAnalyzer/RunTestSuite/@Model.Id`;
+        console.log('Sending request to:', url);
+        console.log('Request data:', requestData);
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: headers,
+            body: JSON.stringify(requestData)
+        });
+
+        console.log('Response status:', response.status);
+        console.log('Response headers:', [...response.headers.entries()]);
+
+        let result;
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('HTTP Error:', response.status, errorText);
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+
+        try {
+            result = await response.json();
+        } catch (jsonError) {
+            const responseText = await response.text();
+            console.error('JSON Parse Error:', jsonError);
+            console.error('Response text:', responseText);
+            throw new Error(`Invalid JSON response: ${jsonError.message}`);
+        }
+        console.log('Response result:', result);
+
+        if (result.success) {
+            // Show test results
+            displayTestResults(result.results);
+            
+            if (result.results.status === 1) { // TestStatus.Passed
+                button.innerHTML = '<i class="fas fa-check"></i> All Tests Passed';
+                button.classList.add('btn-success');
+                showAlert('success', `Test suite completed successfully! ${result.results.passedCount}/${result.results.totalCount} tests passed.`);
+            } else {
+                button.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Some Tests Failed';
+                button.classList.add('btn-warning');
+                showAlert('warning', `Test suite completed with failures. ${result.results.passedCount}/${result.results.totalCount} tests passed.`);
+            }
+        } else {
+            throw new Error(result.error || 'Failed to run tests');
+        }
+    } catch (error) {
+        console.error('Error running tests:', error);
+        button.innerHTML = '<i class="fas fa-times"></i> Test Failed';
+        button.classList.add('btn-danger');
+        showAlert('danger', 'Error running tests: ' + error.message);
+    } finally {
+        button.disabled = false;
+        
+        // Reset button after 5 seconds
+        setTimeout(() => {
+            button.innerHTML = originalText;
+            button.className = 'btn btn-success';
+        }, 5000);
+    }
+}
+
+// Form validation
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+
+function displayTestResults(testSuite) {
+    const container = document.querySelector('.container-fluid');
+    
+    const resultsDiv = document.createElement('div');
+    resultsDiv.id = 'test-results';
+    resultsDiv.className = 'row mt-4';
+    
+    resultsDiv.innerHTML = `
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4><i class="fas fa-chart-bar"></i> Test Results</h4>
+                    <div class="d-flex gap-2">
+                        <span class="badge bg-success">${testSuite.passedCount} Passed</span>
+                        <span class="badge bg-danger">${testSuite.failedCount} Failed</span>
+                        <span class="badge bg-secondary">${testSuite.totalCount} Total</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Test Suite:</strong> ${testSuite.name}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Duration:</strong> ${formatDuration(testSuite.totalDuration)}
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Test Case</th>
+                                    <th>Status</th>
+                                    <th>Response Time</th>
+                                    <th>Details</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${testSuite.testCases.map(testCase => `
+                                    <tr class="${testCase.status === 2 ? 'table-success' : testCase.status === 3 ? 'table-danger' : ''}">
+                                        <td>
+                                            <strong>${testCase.name}</strong><br>
+                                            <small class="text-muted">${testCase.method} ${testCase.endpoint}</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge ${getStatusBadgeClass(testCase.status)}">${getStatusText(testCase.status)}</span>
+                                        </td>
+                                        <td>${testCase.responseTimeMs || 0}ms</td>
+                                        <td>
+                                            ${testCase.assertions.length > 0 ? 
+                                                `<button class="btn btn-sm btn-outline-info" onclick="toggleAssertions('${testCase.id}')">
+                                                    View Assertions (${testCase.assertions.filter(a => a.passed).length}/${testCase.assertions.length})
+                                                </button>` : 
+                                                'No assertions'
+                                            }
+                                            ${testCase.errorMessage ? `<br><small class="text-danger">${testCase.errorMessage}</small>` : ''}
+                                        </td>
+                                    </tr>
+                                    <tr id="assertions-${testCase.id}" style="display: none;">
+                                        <td colspan="4">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h6>Assertions</h6>
+                                                </div>
+                                                <div class="card-body">
+                                                    ${testCase.assertions.map(assertion => `
+                                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                                            <div>
+                                                                <strong>${assertion.name}</strong>
+                                                                <br><small>${assertion.description}</small>
+                                                            </div>
+                                                            <span class="badge ${assertion.passed ? 'bg-success' : 'bg-danger'}">
+                                                                ${assertion.passed ? 'PASS' : 'FAIL'}
+                                                            </span>
+                                                        </div>
+                                                        ${!assertion.passed && assertion.errorMessage ? 
+                                                            `<div class="alert alert-danger alert-sm">${assertion.errorMessage}</div>` : ''
+                                                        }
+                                                    `).join('')}
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.appendChild(resultsDiv);
+}
+
+function toggleAssertions(testCaseId) {
+    const row = document.getElementById(`assertions-${testCaseId}`);
+    row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+}
+
+function getStatusBadgeClass(status) {
+    switch(status) {
+        case 0: return 'bg-secondary'; // Pending
+        case 1: return 'bg-primary';   // Running
+        case 2: return 'bg-success';   // Passed
+        case 3: return 'bg-danger';    // Failed
+        case 4: return 'bg-warning';   // Skipped
+        case 5: return 'bg-secondary'; // Cancelled
+        default: return 'bg-secondary';
+    }
+}
+
+function getStatusText(status) {
+    switch(status) {
+        case 0: return 'Pending';
+        case 1: return 'Running';
+        case 2: return 'Passed';
+        case 3: return 'Failed';
+        case 4: return 'Skipped';
+        case 5: return 'Cancelled';
+        default: return 'Unknown';
+    }
+}
+
+function formatDuration(duration) {
+    // Duration is in TimeSpan format from C#, convert to readable format
+    if (!duration) return '0ms';
+    
+    // Assuming duration is in format like "00:00:02.1234567"
+    const parts = duration.split(':');
+    if (parts.length === 3) {
+        const seconds = parseFloat(parts[2]);
+        if (seconds < 1) {
+            return `${Math.round(seconds * 1000)}ms`;
+        } else {
+            return `${seconds.toFixed(2)}s`;
+        }
+    }
+    return duration;
+}
+
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show mt-3`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container-fluid');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+</script>

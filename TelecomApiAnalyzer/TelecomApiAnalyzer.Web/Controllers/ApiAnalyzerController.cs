@@ -19,18 +19,21 @@ namespace TelecomApiAnalyzer.Web.Controllers
         private readonly IApiDocumentAnalyzer _documentAnalyzer;
         private readonly ICodeGenerationService _codeGenerator;
         private readonly IPostmanCollectionGenerator _postmanGenerator;
+        private readonly ITestRunnerService _testRunnerService;
         private static readonly Dictionary<Guid, ApiAnalysisProject> _projects = new();
 
         public ApiAnalyzerController(
             ILogger<ApiAnalyzerController> logger,
             IApiDocumentAnalyzer documentAnalyzer,
             ICodeGenerationService codeGenerator,
-            IPostmanCollectionGenerator postmanGenerator)
+            IPostmanCollectionGenerator postmanGenerator,
+            ITestRunnerService testRunnerService)
         {
             _logger = logger;
             _documentAnalyzer = documentAnalyzer;
             _codeGenerator = codeGenerator;
             _postmanGenerator = postmanGenerator;
+            _testRunnerService = testRunnerService;
         }
 
         public IActionResult Index()
@@ -385,6 +388,104 @@ output appServiceUrl string = 'https://${appService.properties.defaultHostName}'
     }}
   }}
 }}";
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> RunTestSuite(Guid id, [FromBody] TestRunRequest request)
+        {
+            _logger.LogInformation("RunTestSuite called with id: {ProjectId}", id);
+            
+            if (request == null)
+            {
+                _logger.LogWarning("Request is null");
+                return BadRequest("Request body is required");
+            }
+
+            if (!_projects.TryGetValue(id, out var project))
+            {
+                _logger.LogWarning("Project not found: {ProjectId}", id);
+                return NotFound($"Project {id} not found");
+            }
+
+            try
+            {
+                UpdateWorkflowStep(project, 5, "In Progress");
+
+                var testSuite = await _testRunnerService.RunTestSuiteAsync(project, request.Configuration);
+                
+                UpdateWorkflowStep(project, 5, testSuite.Status == TestStatus.Passed ? "Completed" : "Failed");
+                project.LastModifiedAt = DateTime.UtcNow;
+
+                return Json(new { 
+                    success = true, 
+                    testSuiteId = testSuite.Id,
+                    results = testSuite
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error running test suite for project {ProjectId}", id);
+                UpdateWorkflowStep(project, 5, "Failed");
+                
+                return Json(new { 
+                    success = false, 
+                    error = "An error occurred while running tests: " + ex.Message 
+                });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetTestSuite(Guid testSuiteId)
+        {
+            var testSuite = await _testRunnerService.GetTestSuiteAsync(testSuiteId);
+            if (testSuite == null)
+            {
+                return NotFound();
+            }
+
+            return Json(testSuite);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetTestProgress(Guid testSuiteId)
+        {
+            var testSuite = await _testRunnerService.GetTestSuiteAsync(testSuiteId);
+            if (testSuite == null)
+            {
+                return NotFound();
+            }
+
+            var progress = new TestRunProgress
+            {
+                TestSuiteId = testSuite.Id,
+                TotalTests = testSuite.TotalCount,
+                CompletedTests = testSuite.TestCases.Count(tc => tc.Status == TestStatus.Passed || tc.Status == TestStatus.Failed),
+                PassedTests = testSuite.PassedCount,
+                FailedTests = testSuite.FailedCount,
+                Status = testSuite.Status,
+                CurrentTest = testSuite.TestCases.FirstOrDefault(tc => tc.Status == TestStatus.Running)?.Name ?? ""
+            };
+
+            return Json(progress);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ValidateApiEndpoint([FromBody] TestConfiguration configuration)
+        {
+            try
+            {
+                var isValid = await _testRunnerService.ValidateEndpointAsync(
+                    configuration.BaseUrl, 
+                    "/api/carriers", 
+                    configuration);
+
+                return Json(new { success = true, isValid });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error validating API endpoint");
+                return Json(new { success = false, error = ex.Message });
+            }
         }
     }
 
