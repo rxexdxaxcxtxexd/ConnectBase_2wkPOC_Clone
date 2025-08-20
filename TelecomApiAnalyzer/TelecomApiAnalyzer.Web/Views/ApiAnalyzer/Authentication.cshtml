@@ -1,0 +1,171 @@
+@model TelecomApiAnalyzer.Web.Models.ApiAnalysisProject
+@{
+    ViewData["Title"] = "Authentication Configuration";
+}
+
+<div class="container-fluid mt-4">
+    <h2>Authentication Configuration - @Model.Name</h2>
+    
+    <!-- Workflow Progress -->
+    <div class="row mb-4">
+        <div class="col-12">
+            @await Html.PartialAsync("_WorkflowProgress", Model.WorkflowSteps)
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Authentication Configuration -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-shield-alt"></i> OPTUS API Authentication</h4>
+                </div>
+                <div class="card-body">
+                    @using (Html.BeginForm("SaveAuthentication", "ApiAnalyzer", new { projectId = Model.Id }, FormMethod.Post, true, new { @class = "needs-validation", novalidate = "novalidate" }))
+                    {
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>Production OPTUS API Credentials</strong><br>
+                            These are the production credentials for the OPTUS B2B API endpoints.
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="authType" class="form-label">Authentication Type</label>
+                            <select class="form-select" id="authType" name="authType" required>
+                                <option value="Basic" selected="@(Model.Document?.TechnicalSpec?.Authentication?.Type == "Basic" ? "selected" : "")">Basic Authentication</option>
+                                <option value="Bearer" selected="@(Model.Document?.TechnicalSpec?.Authentication?.Type == "Bearer")">Bearer Token</option>
+                                <option value="OAuth2" selected="@(Model.Document?.TechnicalSpec?.Authentication?.Type == "OAuth2")">OAuth 2.0</option>
+                                <option value="ApiKey" selected="@(Model.Document?.TechnicalSpec?.Authentication?.Type == "ApiKey")">API Key</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="clientId" class="form-label">Client ID / Username</label>
+                            <input type="text" class="form-control" id="clientId" name="clientId" 
+                                   value="@(Model.Document?.TechnicalSpec?.Authentication?.ClientId ?? "B2BNitel")" 
+                                   placeholder="Enter Client ID">
+                            <div class="form-text">For OPTUS B2B API, use: B2BNitel</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="clientSecret" class="form-label">Client Secret / Password</label>
+                            <input type="password" class="form-control" id="clientSecret" name="clientSecret" 
+                                   value="@(Model.Document?.TechnicalSpec?.Authentication?.ClientSecret ?? "Shetry!$990")" 
+                                   placeholder="Enter Client Secret">
+                            <div class="form-text">For OPTUS B2B API, use the production password</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="tokenEndpoint" class="form-label">API Base URL / Token Endpoint</label>
+                            <input type="url" class="form-control" id="tokenEndpoint" name="tokenEndpoint" 
+                                   value="@(Model.Document?.TechnicalSpec?.Authentication?.TokenEndpoint ?? "https://optuswholesale.cpq.cloud.sap/oauth/token")" 
+                                   placeholder="https://api.example.com/oauth/token">
+                            <div class="form-text">OPTUS Production: https://optuswholesale.cpq.cloud.sap/oauth/token</div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Authentication & Continue to Testing
+                            </button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- API Information -->
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-info-circle"></i> API Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>API Provider:</strong> OPTUS Wholesale<br>
+                        <strong>Environment:</strong> Production<br>
+                        <strong>Base URL:</strong> <code>https://optuswholesale.cpq.cloud.sap</code>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Available Endpoints:</strong>
+                        <ul class="list-unstyled mt-2">
+                            @if (Model.Document?.TechnicalSpec?.Endpoints != null)
+                            {
+                                @foreach (var endpoint in Model.Document.TechnicalSpec.Endpoints)
+                                {
+                                    <li><span class="badge bg-primary me-1">@endpoint.Method</span> <code>@endpoint.Path</code></li>
+                                }
+                            }
+                        </ul>
+                    </div>
+
+                    <div class="alert alert-warning alert-sm">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <small>Production credentials required for testing against live OPTUS endpoints.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between">
+                <a href="@Url.Action("GenerateCode", new { projectId = Model.Id })" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Generated Code
+                </a>
+                <a href="@Url.Action("TestConfiguration", new { projectId = Model.Id })" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-right"></i> Skip to Testing
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+code {
+    color: #d63384;
+    background-color: #f8f9fa;
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+}
+
+.alert-sm {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+}
+</style>
+
+<script>
+// Form validation
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+</script>

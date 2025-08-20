@@ -167,6 +167,41 @@ namespace TelecomApiAnalyzer.Web.Controllers
             }
         }
 
+        public IActionResult Authentication(Guid projectId)
+        {
+            if (!_projects.TryGetValue(projectId, out var project))
+            {
+                return NotFound();
+            }
+
+            try
+            {
+                UpdateWorkflowStep(project, 3, "In Progress");
+                
+                // Initialize authentication with OPTUS production settings if not already set
+                if (project.Document.TechnicalSpec.Authentication == null)
+                {
+                    project.Document.TechnicalSpec.Authentication = new AuthenticationDetails
+                    {
+                        Type = "Basic",
+                        ClientId = "B2BNitel",
+                        ClientSecret = "Shetry!$990",
+                        TokenEndpoint = "https://optuswholesale.cpq.cloud.sap/oauth/token"
+                    };
+                }
+                
+                project.LastModifiedAt = DateTime.UtcNow;
+                return View("Authentication", project);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading authentication configuration");
+                UpdateWorkflowStep(project, 3, "Failed");
+                TempData["Error"] = "An error occurred while loading authentication configuration.";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
         [HttpPost]
         public IActionResult SaveAuthentication(Guid projectId, string authType, string clientId, string clientSecret, string tokenEndpoint)
         {
@@ -197,10 +232,19 @@ namespace TelecomApiAnalyzer.Web.Controllers
                 return NotFound();
             }
 
+            // Ensure authentication is completed before proceeding to testing
+            var authStep = project.WorkflowSteps.FirstOrDefault(s => s.StepNumber == 3);
+            if (authStep?.Status != "Completed")
+            {
+                TempData["Error"] = "Please complete authentication configuration before proceeding to testing.";
+                return RedirectToAction(nameof(Authentication), new { projectId });
+            }
+
             try
             {
                 UpdateWorkflowStep(project, 5, "In Progress");
                 
+                // Generate Postman collection for testing
                 var postmanCollection = await _postmanGenerator.GenerateCollectionAsync(project.Document.TechnicalSpec);
                 project.PostmanCollection = postmanCollection;
                 

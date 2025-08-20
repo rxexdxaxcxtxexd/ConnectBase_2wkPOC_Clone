@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Net;
 
 namespace TelecomApiAnalyzer.Web.Models
 {
@@ -58,6 +59,9 @@ namespace TelecomApiAnalyzer.Web.Models
         public bool ValidateSchema { get; set; } = true;
         public bool ValidateResponseTime { get; set; } = true;
         public int MaxResponseTimeMs { get; set; } = 5000;
+        public bool EnableContentDiscovery { get; set; } = true;
+        public bool EnableSessionManagement { get; set; } = true;
+        public CookieContainer? CookieContainer { get; set; }
     }
 
     public class TestRunRequest
@@ -78,6 +82,39 @@ namespace TelecomApiAnalyzer.Web.Models
         public TestStatus Status { get; set; }
         public string? Message { get; set; }
         public int ProgressPercentage => TotalTests > 0 ? (CompletedTests * 100) / TotalTests : 0;
+    }
+
+    public class DiscoveredEndpoint
+    {
+        public string Name { get; set; } = "";
+        public string Url { get; set; } = "";
+        public string Method { get; set; } = "GET";
+        public string Source { get; set; } = ""; // "JavaScript", "Form", "Link"
+        public Dictionary<string, string> Parameters { get; set; } = new();
+        public string Description { get; set; } = "";
+        public DateTime DiscoveredAt { get; set; } = DateTime.UtcNow;
+    }
+
+    public class FormField
+    {
+        public string Name { get; set; } = "";
+        public string Type { get; set; } = "";
+        public string Value { get; set; } = "";
+        public bool Required { get; set; }
+        public string Label { get; set; } = "";
+        public string Placeholder { get; set; } = "";
+        public string FormAction { get; set; } = "";
+        public string FormMethod { get; set; } = "POST";
+        public Dictionary<string, string> Attributes { get; set; } = new();
+    }
+
+    public class ContentDiscovery
+    {
+        public List<DiscoveredEndpoint> Endpoints { get; set; } = new();
+        public List<FormField> Forms { get; set; } = new();
+        public List<string> JavaScriptFiles { get; set; } = new();
+        public Dictionary<string, string> SessionTokens { get; set; } = new();
+        public DateTime DiscoveredAt { get; set; } = DateTime.UtcNow;
     }
 
     public enum TestStatus

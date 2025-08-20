@@ -31,10 +31,10 @@ param apiClientId string = ''
 param apiClientSecret string = ''
 
 @description('API Token Endpoint')
-param apiTokenEndpoint string = 'https://pre-apimanager.lyntia.com/token'
+param apiTokenEndpoint string = 'https://optuswholesale.cpq.cloud.sap/oauth/token'
 
 @description('API Base URL')
-param apiBaseUrl string = 'https://pre-apimanager.lyntia.com'
+param apiBaseUrl string = 'https://optuswholesale.cpq.cloud.sap'
 
 var appServicePlanName = '${appServiceName}-plan'
 var applicationInsightsName = '${appServiceName}-insights'

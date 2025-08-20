@@ -9,7 +9,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<IApiDocumentAnalyzer, ApiDocumentAnalyzer>();
 builder.Services.AddScoped<ICodeGenerationService, CodeGenerationService>();
 builder.Services.AddScoped<IPostmanCollectionGenerator, PostmanCollectionGenerator>();
-builder.Services.AddScoped<ITestRunnerService, TestRunnerService>();
+builder.Services.AddScoped<ITestRunnerService, TestRunnerServiceEnhanced>();
 builder.Services.AddScoped<IOptusApiService, OptusApiService>();
 
 // Add HttpClient for API calls

@@ -47,45 +47,35 @@ namespace TelecomApiAnalyzer.Web.Services
         {
             var endpoints = new List<ApiEndpoint>();
             
-            // Extract Method 0 (Carrier)
+            // OPTUS CPQ Web Portal - Authentication Required
             endpoints.Add(new ApiEndpoint
             {
-                Name = "Get Carriers",
+                Name = "OPTUS CPQ Portal Login",
                 Method = "GET",
-                Path = "/api/carriers",
-                Description = "Provide carrier information mandatory to feeds the quotation Process",
+                Path = "/Login.aspx",
+                Description = "OPTUS CPQ web portal authentication endpoint - browser access required for API access",
                 Parameters = new List<Parameter>(),
                 Response = new ResponseModel
                 {
-                    ContentType = "application/json",
-                    Schema = "Array of CarrierInfo objects",
-                    Example = @"[{""cod_prov"": 99, ""codigo_uso"": ""cab9a0a7-5d77-e911-a84f-000d3a2a78db"", ""municipio"": ""New York Condado"", ""nombre"": ""60 Hudson New York""}]"
+                    ContentType = "text/html",
+                    Schema = "HTML login form",
+                    Example = @"HTML login page requiring browser interaction"
                 }
             });
 
-            // Extract Method 1 (Quotation)
+            // OPTUS CPQ Web Portal - Dashboard Access
             endpoints.Add(new ApiEndpoint
             {
-                Name = "Create Quotation",
-                Method = "POST",
-                Path = "/api/quotation",
-                Description = "Return Quotation and Offer Code based on Inputs provided by the buyer",
-                Parameters = new List<Parameter>
-                {
-                    new Parameter { Name = "address", Type = "string", Required = true, Description = "Requested address", Example = "Gran Via Street 1, Madrid" },
-                    new Parameter { Name = "client", Type = "string", Required = true, Description = "Client ID (API Manager user name)" },
-                    new Parameter { Name = "service", Type = "string", Required = true, Description = "Service provided", Example = "Capacity, Internet" },
-                    new Parameter { Name = "carrier", Type = "string", Required = true, Description = "Carrier from Method 0" },
-                    new Parameter { Name = "capacityMbps", Type = "integer", Required = false, Description = "Speed (Mbps)", Example = "100" },
-                    new Parameter { Name = "termMonths", Type = "integer", Required = false, Description = "Term (months)", Example = "36" },
-                    new Parameter { Name = "offNetOLO", Type = "boolean", Required = false, Description = "The buyer allows offNetOLO services" },
-                    new Parameter { Name = "CIDR", Type = "integer", Required = false, Description = "Subnet mask", Example = "30" },
-                    new Parameter { Name = "requestID", Type = "string", Required = true, Description = "Buyer Request ID", Example = "XX-132456" }
-                },
+                Name = "OPTUS CPQ Dashboard",
+                Method = "GET",
+                Path = "/default.aspx",
+                Description = "OPTUS CPQ main dashboard - accessible after web portal authentication",
+                Parameters = new List<Parameter>(),
                 Response = new ResponseModel
                 {
-                    ContentType = "application/json",
-                    Schema = "QuotationResponse object"
+                    ContentType = "text/html",
+                    Schema = "HTML dashboard page",
+                    Example = @"Web portal dashboard requiring browser session"
                 }
             });
 
@@ -142,7 +132,7 @@ namespace TelecomApiAnalyzer.Web.Services
                     new Property { Name = "mrc", Type = "decimal", Required = true, Description = "Monthly Recurrent Cost" },
                     new Property { Name = "leadTime", Type = "object", Required = true, Description = "Lead time" },
                     new Property { Name = "service", Type = "string", Required = true, Description = "Service provided" },
-                    new Property { Name = "offerCode", Type = "string", Required = true, Description = "Lyntia offer ID" }
+                    new Property { Name = "offerCode", Type = "string", Required = true, Description = "OPTUS offer ID" }
                 }
             });
 
@@ -153,12 +143,20 @@ namespace TelecomApiAnalyzer.Web.Services
         {
             var auth = new AuthenticationDetails
             {
-                Type = "Bearer Token",
-                TokenEndpoint = "https://pre-apimanager.lyntia.com/token",
+                Type = "Web Portal Login (Session-Based)",
+                TokenEndpoint = "https://optuswholesale.cpq.cloud.sap/Login.aspx",
+                ClientId = "B2BNitel",
+                ClientSecret = "Shetry!$990",
                 AdditionalParameters = new Dictionary<string, string>
                 {
-                    { "API_Manager_URL", "https://pre-apimanager.lyntia.com/store/" },
-                    { "Environment", "Pre-production" }
+                    { "Portal_URL", "https://optuswholesale.cpq.cloud.sap/" },
+                    { "Environment", "Production" },
+                    { "Access_Method", "Form-based browser authentication with session management" },
+                    { "Authentication_Flow", "1. GET /Login.aspx 2. Extract CSRF token 3. POST credentials 4. Maintain session cookies" },
+                    { "Session_Management", "Required - cookies and session tokens must be maintained" },
+                    { "Content_Type", "application/x-www-form-urlencoded for forms, text/html for responses" },
+                    { "Note", "OAuth2 not supported - web portal uses form-based authentication only" },
+                    { "Browser_Simulation", "Required for complex workflows and multi-step processes" }
                 }
             };
 
@@ -167,7 +165,7 @@ namespace TelecomApiAnalyzer.Web.Services
 
         private string ExtractTitle(string content)
         {
-            var match = Regex.Match(content, @"Lyntia.*?Quotation API", RegexOptions.IgnoreCase);
+            var match = Regex.Match(content, @"OPTUS.*?B2B|Optus.*?API|PODS.*?API", RegexOptions.IgnoreCase);
             return match.Success ? match.Value : "API Specification";
         }
 
@@ -229,27 +227,44 @@ namespace TelecomApiAnalyzer.Web.Services
         private string GenerateTechnicalSpecMarkdown(TechnicalSpecification spec)
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"# Technical Specification: {spec.Title}");
-            sb.AppendLine($"**Version:** {spec.Version}");
+            sb.AppendLine($"# Technical Specification: {spec.Title} (Portal-Based)");
+            sb.AppendLine($"**Version:** {spec.Version} (QC-Enhanced)");
             sb.AppendLine($"**Generated:** {spec.GeneratedAt:yyyy-MM-dd HH:mm:ss}");
+            sb.AppendLine($"**Architecture:** Web Portal with Session-Based Authentication");
             sb.AppendLine();
             
-            sb.AppendLine("## Authentication");
+            sb.AppendLine("## 🔐 Authentication (CORRECTED)");
             sb.AppendLine($"- **Type:** {spec.Authentication?.Type}");
-            sb.AppendLine($"- **Token Endpoint:** {spec.Authentication?.TokenEndpoint}");
+            sb.AppendLine($"- **Portal URL:** {spec.Authentication?.TokenEndpoint}");
+            if (!string.IsNullOrEmpty(spec.Authentication?.ClientId))
+            {
+                sb.AppendLine($"- **Username:** {spec.Authentication.ClientId}");
+            }
+            sb.AppendLine($"- **Flow:** Form-based authentication with session cookies");
+            sb.AppendLine($"- **Content-Type:** application/x-www-form-urlencoded (forms), text/html (responses)");
+            sb.AppendLine($"- **Session Management:** Required - maintain cookies and CSRF tokens");
             sb.AppendLine();
             
-            sb.AppendLine("## API Endpoints");
+            sb.AppendLine("⚠️ **Important Notes:**");
+            sb.AppendLine("- OAuth2 Bearer tokens are NOT supported");
+            sb.AppendLine("- Direct API calls return HTML, not JSON");
+            sb.AppendLine("- Browser simulation required for complex workflows");
+            sb.AppendLine("- Session expiration must be handled gracefully");
+            sb.AppendLine();
+            
+            sb.AppendLine("## 🌐 Web Portal Endpoints");
             foreach (var endpoint in spec.Endpoints)
             {
                 sb.AppendLine($"### {endpoint.Name}");
                 sb.AppendLine($"- **Method:** {endpoint.Method}");
                 sb.AppendLine($"- **Path:** {endpoint.Path}");
+                sb.AppendLine($"- **Response Type:** HTML (not JSON)");
                 sb.AppendLine($"- **Description:** {endpoint.Description}");
+                sb.AppendLine($"- **Authentication Required:** {(endpoint.Path.Contains("default", StringComparison.OrdinalIgnoreCase) ? "Yes" : "No")}");
                 
                 if (endpoint.Parameters?.Any() == true)
                 {
-                    sb.AppendLine("- **Parameters:**");
+                    sb.AppendLine("- **Form Parameters:**");
                     foreach (var param in endpoint.Parameters)
                     {
                         sb.AppendLine($"  - `{param.Name}` ({param.Type}): {param.Description} {(param.Required ? "[Required]" : "[Optional]")}");
@@ -258,16 +273,36 @@ namespace TelecomApiAnalyzer.Web.Services
                 sb.AppendLine();
             }
             
-            sb.AppendLine("## Data Models");
+            sb.AppendLine("## 📊 Data Models (HTML-Parsed)");
+            sb.AppendLine("*Note: These models represent data structures that would be extracted from HTML responses, not JSON APIs.*");
+            sb.AppendLine();
+            
             foreach (var model in spec.Models)
             {
                 sb.AppendLine($"### {model.Name}");
+                sb.AppendLine("*Source: Parsed from portal HTML content*");
                 foreach (var prop in model.Properties)
                 {
                     sb.AppendLine($"- `{prop.Name}` ({prop.Type}): {prop.Description} {(prop.Required ? "[Required]" : "")}");
                 }
                 sb.AppendLine();
             }
+            
+            sb.AppendLine("## 🔄 Integration Approach");
+            sb.AppendLine("### Recommended Implementation:");
+            sb.AppendLine("1. **Browser Simulation**: Use HttpClient with cookie container");
+            sb.AppendLine("2. **Session Management**: Maintain authentication state across requests");
+            sb.AppendLine("3. **HTML Parsing**: Extract data from HTML responses using regex or HTML parsers");
+            sb.AppendLine("4. **Form Submission**: Submit data using application/x-www-form-urlencoded");
+            sb.AppendLine("5. **Error Handling**: Parse HTML for error messages and validation failures");
+            sb.AppendLine();
+            
+            sb.AppendLine("### ❌ What NOT to do:");
+            sb.AppendLine("- Do not expect JSON responses from portal endpoints");
+            sb.AppendLine("- Do not use OAuth2 Bearer token authentication");
+            sb.AppendLine("- Do not treat portal pages as REST API endpoints");
+            sb.AppendLine("- Do not ignore session management and CSRF tokens");
+            sb.AppendLine();
             
             return sb.ToString();
         }

@@ -14,68 +14,22 @@
     </div>
 
     <div class="row">
-        <!-- Authentication Configuration -->
+        <!-- Test Configuration Panel -->
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h4><i class="fas fa-shield-alt"></i> Authentication Configuration</h4>
-                </div>
-                <div class="card-body">
-                    @using (Html.BeginForm("SaveAuthentication", "ApiAnalyzer", new { projectId = Model.Id }, FormMethod.Post, true, new { @class = "needs-validation", novalidate = "novalidate" }))
-                    {
-                        <div class="mb-3">
-                            <label for="authType" class="form-label">Authentication Type</label>
-                            <select class="form-select" id="authType" name="authType" required>
-                                <option value="">Select Authentication Type</option>
-                                <option value="OAuth2" selected="@(Model.Document?.TechnicalSpec?.Authentication?.Type == "OAuth2")">OAuth 2.0</option>
-                                <option value="ApiKey" selected="@(Model.Document?.TechnicalSpec?.Authentication?.Type == "ApiKey")">API Key</option>
-                                <option value="Bearer" selected="@(Model.Document?.TechnicalSpec?.Authentication?.Type == "Bearer")">Bearer Token</option>
-                                <option value="Basic" selected="@(Model.Document?.TechnicalSpec?.Authentication?.Type == "Basic")">Basic Auth</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="clientId" class="form-label">Client ID</label>
-                            <input type="text" class="form-control" id="clientId" name="clientId" 
-                                   value="@Model.Document?.TechnicalSpec?.Authentication?.ClientId" placeholder="Enter Client ID">
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="clientSecret" class="form-label">Client Secret</label>
-                            <input type="password" class="form-control" id="clientSecret" name="clientSecret" 
-                                   value="@Model.Document?.TechnicalSpec?.Authentication?.ClientSecret" placeholder="Enter Client Secret">
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="tokenEndpoint" class="form-label">Token Endpoint</label>
-                            <input type="url" class="form-control" id="tokenEndpoint" name="tokenEndpoint" 
-                                   value="@Model.Document?.TechnicalSpec?.Authentication?.TokenEndpoint" placeholder="https://api.example.com/oauth/token">
-                        </div>
-
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Save Authentication
-                        </button>
-                    }
-                </div>
-            </div>
-        </div>
-
-        <!-- Test Configuration -->
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h4><i class="fas fa-vials"></i> Test Configuration</h4>
+                    <h4><i class="fas fa-vials"></i> API Test Suite</h4>
                 </div>
                 <div class="card-body">
                     @if (Model.PostmanCollection != null)
                     {
                         <div class="alert alert-success">
                             <i class="fas fa-check-circle"></i>
-                            Postman collection generated successfully!
+                            Test suite generated successfully! Ready to test OPTUS B2B API endpoints.
                         </div>
                         
                         <div class="mb-3">
-                            <label class="form-label">Collection Name</label>
+                            <label class="form-label">Test Collection</label>
                             <input type="text" class="form-control" value="@Model.PostmanCollection.Name" readonly>
                         </div>
 
@@ -85,29 +39,85 @@
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Test Requests</label>
+                            <label class="form-label">Test Configuration</label>
                             <div class="bg-light p-3 rounded">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span>@(Model.Document?.TechnicalSpec?.Endpoints?.Count ?? 0) endpoints configured</span>
-                                    <span class="badge bg-success">Ready for Testing</span>
+                                <div class="row">
+                                    <div class="col-6">
+                                        <strong>Endpoint Count:</strong> @(Model.Document?.TechnicalSpec?.Endpoints?.Count ?? 0)
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Auth Type:</strong> @(Model.Document?.TechnicalSpec?.Authentication?.Type ?? "Basic")
+                                    </div>
+                                </div>
+                                <div class="row mt-2">
+                                    <div class="col-12">
+                                        <span class="badge bg-success">Production API Ready</span>
+                                        <span class="badge bg-info">OPTUS B2B</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         <div class="d-grid gap-2">
-                            <a href="@Url.Action("DownloadPostmanCollection", new { projectId = Model.Id })" class="btn btn-outline-primary">
-                                <i class="fas fa-download"></i> Download Postman Collection
-                            </a>
                             <button type="button" class="btn btn-success" onclick="runTests()">
                                 <i class="fas fa-play"></i> Run Test Suite
                             </button>
+                            <a href="@Url.Action("DownloadPostmanCollection", new { projectId = Model.Id })" class="btn btn-outline-primary">
+                                <i class="fas fa-download"></i> Download Postman Collection
+                            </a>
                         </div>
                     }
                     else
                     {
                         <div class="alert alert-warning">
                             <i class="fas fa-exclamation-triangle"></i>
-                            Test configuration not yet generated. Please save authentication details first.
+                            Test configuration generation failed. Please check authentication details and try again.
+                        </div>
+                        
+                        <div class="d-grid">
+                            <a href="@Url.Action("Authentication", new { projectId = Model.Id })" class="btn btn-outline-primary">
+                                <i class="fas fa-arrow-left"></i> Review Authentication
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Authentication Summary -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h4><i class="fas fa-shield-alt"></i> Authentication Summary</h4>
+                </div>
+                <div class="card-body">
+                    @if (Model.Document?.TechnicalSpec?.Authentication != null)
+                    {
+                        <div class="row mb-3">
+                            <div class="col-4"><strong>Type:</strong></div>
+                            <div class="col-8">
+                                <span class="badge bg-primary">@Model.Document.TechnicalSpec.Authentication.Type</span>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-4"><strong>Client ID:</strong></div>
+                            <div class="col-8"><code>@Model.Document.TechnicalSpec.Authentication.ClientId</code></div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-4"><strong>Endpoint:</strong></div>
+                            <div class="col-8"><small class="text-muted">@Model.Document.TechnicalSpec.Authentication.TokenEndpoint</small></div>
+                        </div>
+                        
+                        <div class="alert alert-info alert-sm">
+                            <i class="fas fa-info-circle"></i>
+                            Tests will use production OPTUS credentials to validate API endpoints.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            No authentication configuration found.
                         </div>
                     }
                 </div>
@@ -122,7 +132,7 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header">
-                        <h4><i class="fas fa-list"></i> API Endpoints Summary</h4>
+                        <h4><i class="fas fa-list"></i> OPTUS B2B Endpoints to Test</h4>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -145,7 +155,7 @@
                                             <td><code>@endpoint.Path</code></td>
                                             <td>@endpoint.Description</td>
                                             <td>
-                                                <span class="badge bg-secondary">Pending</span>
+                                                <span class="badge bg-secondary">Ready</span>
                                             </td>
                                         </tr>
                                     }
@@ -162,8 +172,8 @@
     <div class="row mt-4">
         <div class="col-12">
             <div class="d-flex justify-content-between">
-                <a href="@Url.Action("GenerateCode", new { projectId = Model.Id })" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Back to Generated Code
+                <a href="@Url.Action("Authentication", new { projectId = Model.Id })" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Authentication
                 </a>
                 <a href="@Url.Action("GenerateDeployment", new { projectId = Model.Id })" class="btn btn-success">
                     <i class="fas fa-arrow-right"></i> Continue to Deployment
@@ -194,6 +204,11 @@ code {
     padding: 0.125rem 0.25rem;
     border-radius: 0.25rem;
 }
+
+.alert-sm {
+    font-size: 0.875rem;
+    padding: 0.5rem 0.75rem;
+}
 </style>
 
 <script>
@@ -214,33 +229,26 @@ async function runTests() {
             existingResults.remove();
         }
 
-        // Get authentication details from form
-        const authType = document.getElementById('authType').value;
-        const clientId = document.getElementById('clientId').value;
-        const clientSecret = document.getElementById('clientSecret').value;
-        const tokenEndpoint = document.getElementById('tokenEndpoint').value;
-        const baseUrl = prompt('Enter API Base URL:', 'https://pre-apimanager.lyntia.com');
+        // Get authentication details from the model
+        const baseUrl = 'https://optuswholesale.cpq.cloud.sap';
         
-        if (!baseUrl) {
-            throw new Error('Base URL is required');
-        }
-
         // Prepare test configuration
         const testConfig = {
             baseUrl: baseUrl,
             authentication: {
-                type: authType,
-                clientId: clientId,
-                clientSecret: clientSecret,
-                tokenEndpoint: tokenEndpoint
+                type: '@(Model.Document?.TechnicalSpec?.Authentication?.Type ?? "Basic")',
+                clientId: '@(Model.Document?.TechnicalSpec?.Authentication?.ClientId ?? "B2BNitel")',
+                clientSecret: '@(Model.Document?.TechnicalSpec?.Authentication?.ClientSecret ?? "Shetry!$990")',
+                tokenEndpoint: '@(Model.Document?.TechnicalSpec?.Authentication?.TokenEndpoint ?? "https://optuswholesale.cpq.cloud.sap/oauth/token")'
             },
             globalHeaders: {
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'Content-Type': 'application/x-www-form-urlencoded'
             },
             timeoutMs: 30000,
             validateSchema: true,
             validateResponseTime: true,
-            maxResponseTimeMs: 5000
+            maxResponseTimeMs: 10000
         };
 
         const requestData = {
@@ -270,7 +278,6 @@ async function runTests() {
         });
 
         console.log('Response status:', response.status);
-        console.log('Response headers:', [...response.headers.entries()]);
 
         let result;
         if (!response.ok) {
@@ -293,7 +300,7 @@ async function runTests() {
             // Show test results
             displayTestResults(result.results);
             
-            if (result.results.status === 1) { // TestStatus.Passed
+            if (result.results.status === 2) { // TestStatus.Passed
                 button.innerHTML = '<i class="fas fa-check"></i> All Tests Passed';
                 button.classList.add('btn-success');
                 showAlert('success', `Test suite completed successfully! ${result.results.passedCount}/${result.results.totalCount} tests passed.`);
@@ -320,23 +327,6 @@ async function runTests() {
         }, 5000);
     }
 }
-
-// Form validation
-(function() {
-    'use strict';
-    window.addEventListener('load', function() {
-        var forms = document.getElementsByClassName('needs-validation');
-        var validation = Array.prototype.filter.call(forms, function(form) {
-            form.addEventListener('submit', function(event) {
-                if (form.checkValidity() === false) {
-                    event.preventDefault();
-                    event.stopPropagation();
-                }
-                form.classList.add('was-validated');
-            }, false);
-        });
-    }, false);
-})();
 
 function displayTestResults(testSuite) {
     const container = document.querySelector('.container-fluid');
@@ -463,10 +453,8 @@ function getStatusText(status) {
 }
 
 function formatDuration(duration) {
-    // Duration is in TimeSpan format from C#, convert to readable format
     if (!duration) return '0ms';
     
-    // Assuming duration is in format like "00:00:02.1234567"
     const parts = duration.split(':');
     if (parts.length === 3) {
         const seconds = parseFloat(parts[2]);

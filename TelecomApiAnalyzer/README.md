@@ -57,9 +57,17 @@ Update `appsettings.json` with your API settings:
 ```json
 {
   "ApiSettings": {
-    "TokenEndpoint": "https://your-api-manager.com/token",
-    "ClientId": "your-client-id",
-    "ClientSecret": "your-client-secret"
+    "TokenEndpoint": "https://optuswholesale.cpq.cloud.sap/oauth/token",
+    "ClientId": "B2BNitel",
+    "ClientSecret": "Shetry!$990",
+    "BaseUrl": "https://optuswholesale.cpq.cloud.sap"
+  },
+  "OptusApiSettings": {
+    "BaseUrl": "https://optuswholesale.cpq.cloud.sap",
+    "Username": "B2BNitel",
+    "Password": "Shetry!$990",
+    "B2BSQEndpoint": "/sap/bc/rest/cpq/b2b/sq",
+    "B2BQuoteEndpoint": "/sap/bc/rest/cpq/b2b/quote"
   }
 }
 ```
@@ -72,11 +80,11 @@ Update `appsettings.json` with your API settings:
 
 ## Supported API Specifications
 
-Currently supports the Lyntia Quotation API with:
-- Carrier information endpoints
-- Quotation creation endpoints
-- Authentication via Bearer tokens
-- Error handling and use cases
+Currently supports the OPTUS B2B API with:
+- Service Qualification (B2B-SQ) endpoints
+- Quote creation (B2B-QUOTE) endpoints
+- Authentication via Basic Auth with production credentials
+- NBN service types and Australian address validation
 
 ## Project Structure
 
@@ -87,7 +95,7 @@ TelecomApiAnalyzer/
 │   │   └── ApiAnalyzerController.cs
 │   ├── Models/
 │   │   ├── ApiDocumentModels.cs
-│   │   └── LyntiaApiModels.cs
+│   │   └── OptusApiModels.cs
 │   ├── Services/
 │   │   ├── ApiDocumentAnalyzer.cs
 │   │   ├── CodeGenerationService.cs

@@ -36,5 +36,10 @@ namespace TelecomApiAnalyzer.Web.Services
         /// Validates if the API endpoint is accessible
         /// </summary>
         Task<bool> ValidateEndpointAsync(string baseUrl, string endpoint, TestConfiguration configuration);
+
+        /// <summary>
+        /// Gets content discovery results for a specific test case
+        /// </summary>
+        Task<ContentDiscovery?> GetContentDiscoveryAsync(Guid testCaseId);
     }
 }
