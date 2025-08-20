@@ -122,36 +122,121 @@ namespace TelecomApiAnalyzer.Web.Services
         {
             var testCases = new List<TestCase>();
 
-            if (project.Document?.TechnicalSpec?.Endpoints == null)
-                return testCases;
+            // Generate OPTUS-specific test cases for production API integration
+            testCases.AddRange(GenerateOptusTestCases());
 
-            foreach (var endpoint in project.Document.TechnicalSpec.Endpoints)
+            // Generate test cases from project endpoints (if available)
+            if (project.Document?.TechnicalSpec?.Endpoints != null)
             {
-                // Generate positive test case
-                var positiveTest = new TestCase
+                foreach (var endpoint in project.Document.TechnicalSpec.Endpoints)
                 {
-                    Id = Guid.NewGuid(),
-                    Name = $"{endpoint.Method} {endpoint.Path} - Valid Request",
-                    Description = $"Test successful {endpoint.Method} request to {endpoint.Path}",
-                    Method = endpoint.Method,
-                    Endpoint = endpoint.Path,
-                    Status = TestStatus.Pending
-                };
+                    // Generate positive test case
+                    var positiveTest = new TestCase
+                    {
+                        Id = Guid.NewGuid(),
+                        Name = $"OPTUS {endpoint.Method} {endpoint.Path} - Valid Request",
+                        Description = $"Test successful {endpoint.Method} request to OPTUS {endpoint.Path}",
+                        Method = endpoint.Method,
+                        Endpoint = endpoint.Path,
+                        Status = TestStatus.Pending
+                    };
 
-                // Add request body for POST requests
-                if (endpoint.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
-                {
-                    positiveTest.RequestBody = GenerateRequestBody(endpoint);
+                    // Add request body for POST requests
+                    if (endpoint.Method.Equals("POST", StringComparison.OrdinalIgnoreCase))
+                    {
+                        positiveTest.RequestBody = GenerateRequestBody(endpoint);
+                    }
+
+                    // Generate negative test cases
+                    var negativeTests = GenerateNegativeTestCases(endpoint);
+
+                    testCases.Add(positiveTest);
+                    testCases.AddRange(negativeTests);
                 }
-
-                // Generate negative test cases
-                var negativeTests = GenerateNegativeTestCases(endpoint);
-
-                testCases.Add(positiveTest);
-                testCases.AddRange(negativeTests);
             }
 
             return await Task.FromResult(testCases);
+        }
+
+        private List<TestCase> GenerateOptusTestCases()
+        {
+            var testCases = new List<TestCase>();
+
+            // B2B-SQ Service Qualification Test
+            testCases.Add(new TestCase
+            {
+                Id = Guid.NewGuid(),
+                Name = "OPTUS B2B-SQ Service Qualification - Valid Request",
+                Description = "Test OPTUS B2B Service Qualification with production credentials",
+                Method = "POST",
+                Endpoint = "/sap/bc/rest/cpq/b2b/sq",
+                Status = TestStatus.Pending,
+                RequestBody = GenerateOptusB2BSQBody()
+            });
+
+            // B2B-QUOTE Test Case
+            testCases.Add(new TestCase
+            {
+                Id = Guid.NewGuid(),
+                Name = "OPTUS B2B-QUOTE Create Quote - Valid Request",
+                Description = "Test OPTUS B2B Quote creation with production credentials",
+                Method = "POST",
+                Endpoint = "/sap/bc/rest/cpq/b2b/quote",
+                Status = TestStatus.Pending,
+                RequestBody = GenerateOptusB2BQuoteBody()
+            });
+
+            // Connection Validation Test
+            testCases.Add(new TestCase
+            {
+                Id = Guid.NewGuid(),
+                Name = "OPTUS API Connection Validation",
+                Description = "Test basic connectivity to OPTUS production API",
+                Method = "GET",
+                Endpoint = "/",
+                Status = TestStatus.Pending
+            });
+
+            return testCases;
+        }
+
+        private string GenerateOptusB2BSQBody()
+        {
+            var requestId = Guid.NewGuid().ToString();
+            var formParams = new Dictionary<string, string>
+            {
+                { "serviceAddress", "Level 1, 123 Collins Street, Melbourne VIC 3000" },
+                { "postCode", "3000" },
+                { "state", "VIC" },
+                { "serviceType", "NBN" },
+                { "bandwidth", "100" },
+                { "customerId", "B2BNitel" },
+                { "requestId", requestId }
+            };
+
+            var formData = string.Join("&", formParams.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
+            return $"Param={Uri.EscapeDataString(formData)}";
+        }
+
+        private string GenerateOptusB2BQuoteBody()
+        {
+            var requestId = Guid.NewGuid().ToString();
+            var formParams = new Dictionary<string, string>
+            {
+                { "serviceQualificationId", Guid.NewGuid().ToString() },
+                { "productId", "NBN-BUSINESS-100" },
+                { "customerId", "B2BNitel" },
+                { "customerName", "Nitel Communications Pty Ltd" },
+                { "serviceAddress", "Level 1, 123 Collins Street, Melbourne VIC 3000" },
+                { "contactEmail", "integration@nitel.com.au" },
+                { "contactPhone", "+61399999999" },
+                { "requestedDeliveryDate", DateTime.Now.AddDays(30).ToString("yyyy-MM-dd") },
+                { "contractTerm", "24" },
+                { "requestId", requestId }
+            };
+
+            var formData = string.Join("&", formParams.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
+            return $"Param={Uri.EscapeDataString(formData)}";
         }
 
         public async Task<TestSuite?> GetTestSuiteAsync(Guid testSuiteId)
@@ -190,7 +275,13 @@ namespace TelecomApiAnalyzer.Web.Services
             // Set timeout
             httpClient.Timeout = TimeSpan.FromMilliseconds(configuration.TimeoutMs);
 
-            // Add authentication
+            // Add OPTUS Basic Authentication for production API access
+            var optusUsername = "B2BNitel";
+            var optusPassword = "Shetry!$990";
+            var basicAuthCredentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{optusUsername}:{optusPassword}"));
+            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", basicAuthCredentials);
+
+            // Add authentication from configuration (fallback)
             if (configuration.Authentication != null)
             {
                 switch (configuration.Authentication.Type?.ToLower())
@@ -209,6 +300,14 @@ namespace TelecomApiAnalyzer.Web.Services
                             !string.IsNullOrEmpty(configuration.Authentication.ClientSecret))
                         {
                             httpClient.DefaultRequestHeaders.Add(configuration.Authentication.ClientId, configuration.Authentication.ClientSecret);
+                        }
+                        break;
+                    case "basic":
+                        if (!string.IsNullOrEmpty(configuration.Authentication.ClientId) && 
+                            !string.IsNullOrEmpty(configuration.Authentication.ClientSecret))
+                        {
+                            var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{configuration.Authentication.ClientId}:{configuration.Authentication.ClientSecret}"));
+                            httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic", credentials);
                         }
                         break;
                 }
@@ -230,15 +329,39 @@ namespace TelecomApiAnalyzer.Web.Services
                 }
             }
 
-            // Set accept header for JSON responses
+            // Set accept headers for both JSON and form responses
             httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/x-www-form-urlencoded"));
+            httpClient.DefaultRequestHeaders.Add("User-Agent", "TelecomApiAnalyzer/1.0");
             
             return httpClient;
         }
 
         private HttpRequestMessage BuildHttpRequest(TestCase testCase, TestConfiguration configuration)
         {
-            var url = $"{configuration.BaseUrl.TrimEnd('/')}/{testCase.Endpoint.TrimStart('/')}";
+            // Use OPTUS production endpoints if available, otherwise use configuration
+            var baseUrl = configuration.BaseUrl;
+            var endpoint = testCase.Endpoint;
+
+            // Check if this is an OPTUS API test and override with production endpoints
+            if (testCase.Name.Contains("OPTUS", StringComparison.OrdinalIgnoreCase) || 
+                testCase.Endpoint.Contains("/b2b/", StringComparison.OrdinalIgnoreCase))
+            {
+                baseUrl = "https://optuswholesale.cpq.cloud.sap";
+                
+                if (testCase.Endpoint.Contains("/quotation", StringComparison.OrdinalIgnoreCase) || 
+                    testCase.Endpoint.Contains("/quote", StringComparison.OrdinalIgnoreCase))
+                {
+                    endpoint = "/sap/bc/rest/cpq/b2b/quote";
+                }
+                else if (testCase.Endpoint.Contains("/sq", StringComparison.OrdinalIgnoreCase) || 
+                         testCase.Endpoint.Contains("service", StringComparison.OrdinalIgnoreCase))
+                {
+                    endpoint = "/sap/bc/rest/cpq/b2b/sq";
+                }
+            }
+
+            var url = $"{baseUrl.TrimEnd('/')}{endpoint}";
             var method = new HttpMethod(testCase.Method.ToUpper());
             var request = new HttpRequestMessage(method, url);
 
@@ -252,7 +375,15 @@ namespace TelecomApiAnalyzer.Web.Services
             if (!string.IsNullOrEmpty(testCase.RequestBody) && 
                 (method == HttpMethod.Post || method == HttpMethod.Put || method == HttpMethod.Patch))
             {
-                request.Content = new StringContent(testCase.RequestBody, Encoding.UTF8, "application/json");
+                // Check if this is form-encoded data (OPTUS format)
+                if (testCase.RequestBody.StartsWith("Param="))
+                {
+                    request.Content = new StringContent(testCase.RequestBody, Encoding.UTF8, "application/x-www-form-urlencoded");
+                }
+                else
+                {
+                    request.Content = new StringContent(testCase.RequestBody, Encoding.UTF8, "application/json");
+                }
             }
 
             return request;
@@ -361,18 +492,43 @@ namespace TelecomApiAnalyzer.Web.Services
         {
             if (endpoint.Path.Contains("/quotation", StringComparison.OrdinalIgnoreCase))
             {
-                return JsonSerializer.Serialize(new
+                // Generate form-encoded data for OPTUS B2B-QUOTE workflow
+                var requestId = Guid.NewGuid().ToString();
+                var formParams = new Dictionary<string, string>
                 {
-                    address = "Gran Via Street 1, Madrid",
-                    client = "test-client",
-                    service = "Capacity",
-                    carrier = "test-carrier",
-                    capacityMbps = 100,
-                    termMonths = 36,
-                    offNetOLO = false,
-                    CIDR = 30,
-                    requestID = "TEST-001"
-                }, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                    { "serviceQualificationId", Guid.NewGuid().ToString() },
+                    { "productId", "NBN-100" },
+                    { "customerId", "B2BNitel" },
+                    { "customerName", "Nitel Communications" },
+                    { "serviceAddress", "123 Collins Street, Melbourne VIC 3000" },
+                    { "contactEmail", "test@nitel.com" },
+                    { "contactPhone", "+61400000000" },
+                    { "requestedDeliveryDate", DateTime.Now.AddDays(30).ToString("yyyy-MM-dd") },
+                    { "contractTerm", "24" },
+                    { "requestId", requestId }
+                };
+
+                var formData = string.Join("&", formParams.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
+                return $"Param={Uri.EscapeDataString(formData)}";
+            }
+
+            if (endpoint.Path.Contains("/sq", StringComparison.OrdinalIgnoreCase) || endpoint.Path.Contains("service", StringComparison.OrdinalIgnoreCase))
+            {
+                // Generate form-encoded data for OPTUS B2B-SQ workflow
+                var requestId = Guid.NewGuid().ToString();
+                var formParams = new Dictionary<string, string>
+                {
+                    { "serviceAddress", "123 Collins Street, Melbourne VIC 3000" },
+                    { "postCode", "3000" },
+                    { "state", "VIC" },
+                    { "serviceType", "NBN" },
+                    { "bandwidth", "100" },
+                    { "customerId", "B2BNitel" },
+                    { "requestId", requestId }
+                };
+
+                var formData = string.Join("&", formParams.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
+                return $"Param={Uri.EscapeDataString(formData)}";
             }
 
             return "{}";
